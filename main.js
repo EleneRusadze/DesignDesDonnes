@@ -5,13 +5,15 @@ let tooltip;
 let table;
 
 let minRating, maxRating;
+let minYear, maxYear;
 
 // Global lane bounds (populated in processTable)
 let genreLaneStart = {};
 let genreLaneEnd = {};
 
 // Margin constants
-const MARGIN_LEFT = 20;
+// Increase left margin so year axis and labels fit comfortably
+const MARGIN_LEFT = 80;
 const MARGIN_RIGHT = 20;
 const MARGIN_BOTTOM = 80; // increased bottom padding to make room for labels
 
@@ -156,6 +158,16 @@ function processTable() {
   let ratings = movies.map((m) => m.rating);
   minRating = Math.min(...ratings);
   maxRating = Math.max(...ratings);
+
+  // Determine year range
+  let years = movies.map((m) => m.year).filter((y) => y > 0);
+  if (years.length > 0) {
+    minYear = Math.min(...years);
+    maxYear = Math.max(...years);
+  } else {
+    minYear = 1900;
+    maxYear = new Date().getFullYear();
+  }
 }
 
 function draw() {
@@ -168,6 +180,64 @@ function draw() {
   textSize(28);
   textStyle(BOLD);
   text("IMDB Top 1000 Movies", width / 2, 12);
+  pop();
+
+  // ----- Left year axis & horizontal grid (draw behind movies) -----
+  // Compute panel/chart bounds similar to info panel so axis doesn't overlap
+  const headerY = 12;
+  const headerH = 28;
+  const panelGap = 8;
+  const panelY = headerY + headerH + panelGap;
+  const panelH = 64;
+  const chartTop = panelY + panelH + 12; // some gap under panel
+  const chartBottom = height - MARGIN_BOTTOM; // baseline for stacks
+
+  // axis position (left of lanes) - place it a little inside the left margin
+  const axisX = MARGIN_LEFT - 12;
+
+  // draw vertical axis line
+  push();
+  stroke(120, 160);
+  strokeWeight(1);
+  line(axisX, chartTop, axisX, chartBottom);
+
+  // draw ticks and light horizontal gridlines
+  if (typeof minYear !== 'undefined' && minYear < maxYear) {
+    const tickCount = 8;
+    const range = maxYear - minYear;
+    let step = Math.ceil(range / tickCount);
+    if (step < 1) step = 1;
+    // build ticks from minYear to maxYear inclusive
+    for (let yv = minYear; yv <= maxYear; yv += step) {
+      const yPos = map(yv, minYear, maxYear, chartBottom, chartTop);
+      // tick
+      stroke(170);
+      line(axisX - 6, yPos, axisX + 6, yPos);
+      // faint grid across lanes
+      stroke(80);
+      strokeWeight(1);
+      drawingContext.setLineDash && drawingContext.setLineDash([2, 4]);
+      line(axisX + 8, yPos, width - MARGIN_RIGHT, yPos);
+      drawingContext.setLineDash && drawingContext.setLineDash([]);
+      // label (ensure it's inside the canvas by using values derived from MARGIN_LEFT)
+      noStroke();
+      fill(200);
+      textSize(11);
+      textAlign(RIGHT, CENTER);
+      text(yv, axisX - 14, yPos);
+    }
+    // final tick at maxYear if it wasn't hit due to stepping
+    if ((maxYear - minYear) % step !== 0) {
+      const yPos = map(maxYear, minYear, maxYear, chartBottom, chartTop);
+      stroke(170);
+      line(axisX - 6, yPos, axisX + 6, yPos);
+      noStroke();
+      fill(200);
+      textAlign(RIGHT, CENTER);
+      textSize(11);
+      text(maxYear, axisX - 14, yPos);
+    }
+  }
   pop();
 
   let hoveredMovie = null;
