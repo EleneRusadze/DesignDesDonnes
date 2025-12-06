@@ -140,6 +140,18 @@ function processTable() {
     });
   });
 
+  // Sort global movies array to ensure vertical stacking order is by release year.
+  // We sort by: genre order (to keep lanes grouped), x-bucket (columns), then year ascending
+  // so that older movies are processed first (they fall and settle to the bottom),
+  // and newer movies are processed later and land on top.
+  movies.sort((a, b) => {
+    if (a.genre !== b.genre) return genres.indexOf(a.genre) - genres.indexOf(b.genre);
+    const ax = Math.round(a.x / 10);
+    const bx = Math.round(b.x / 10);
+    if (ax !== bx) return ax - bx;
+    return a.year - b.year; // ascending: older (smaller year) first
+  });
+
   // Determine rating range
   let ratings = movies.map((m) => m.rating);
   minRating = Math.min(...ratings);
